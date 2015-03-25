@@ -7,6 +7,28 @@ namespace Shouldly
 {
     public static partial class Should
     {
+        public static Task ThrowAsync<TException>(Func<Task> actual) where TException : Exception
+        {
+            //return Task.Factory.StartNew(() => Throw<TException>(actual));
+
+            return actual().ContinueWith(t =>
+            {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    var ex =
+                        t.Exception.Flatten();
+                   
+                    throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof (TException)).ToString());
+                    //throw new ChuckedAWobbly("faulted with " + t.Exception.GetType().ToString());
+                }
+
+                if (t.IsCanceled)
+                    throw new ChuckedAWobbly("Canceled");
+                // return t;
+                throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof(TException)).ToString());
+            });
+          
+        }
         public static TException Throw<TException>(Func<Task> actual) where TException : Exception
         {
             return Throw<TException>(actual, ShouldlyConfiguration.DefaultTaskTimeout);
