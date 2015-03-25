@@ -57,7 +57,7 @@ namespace Shouldly.Tests.ShouldThrowAsync
             public int Add(int a, int b)
             {
                 if (a > 5)
-                    throw new Exception("a is greater than 5");
+                    throw new ArgumentException("a is greater than 5");
                 return a + b;
             }
         }
@@ -78,7 +78,7 @@ namespace Shouldly.Tests.ShouldThrowAsync
                // t.Wait();
                 return t;
               
-            });
+            }).Wait();
         }
     }
 }

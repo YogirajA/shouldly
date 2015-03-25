@@ -7,27 +7,25 @@ namespace Shouldly
 {
     public static partial class Should
     {
-        public static Task ThrowAsync<TException>(Func<Task> actual) where TException : Exception
+        public static Task<TException> ThrowAsync<TException>(Func<Task> actual) where TException : Exception
         {
-            //return Task.Factory.StartNew(() => Throw<TException>(actual));
-
             return actual().ContinueWith(t =>
             {
-                if (t.IsFaulted && t.Exception != null)
+                if (t.IsFaulted)
                 {
-                    var ex =
-                        t.Exception.Flatten();
-                   
-                    throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof (TException)).ToString());
-                    //throw new ChuckedAWobbly("faulted with " + t.Exception.GetType().ToString());
+                    if (t.Exception == null)
+                        throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof (TException)).ToString());
+                    
+                    return HandleAggregateException<TException>(t.Exception);
                 }
 
                 if (t.IsCanceled)
-                    throw new ChuckedAWobbly("Canceled");
-                // return t;
+                    throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof(TException)).ToString()
+                        ,new TaskCanceledException("Exception task is cancelled"));
+
                 throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof(TException)).ToString());
             });
-          
+  
         }
         public static TException Throw<TException>(Func<Task> actual) where TException : Exception
         {
@@ -46,11 +44,7 @@ namespace Shouldly
             }
             catch (AggregateException e)
             {
-                var innerException = e.InnerException;
-                if (innerException is TException)
-                    return (TException)innerException;
-
-                throw new ShouldAssertException(new ExpectedActualShouldlyMessage(typeof(TException), innerException.GetType()).ToString());
+                return HandleAggregateException<TException>(e);
             }
             catch (Exception e)
             {
@@ -61,6 +55,16 @@ namespace Shouldly
             }
 
             throw new ShouldAssertException(new ExpectedShouldlyMessage(typeof(TException)).ToString());
+        }
+
+        private static TException HandleAggregateException<TException>(AggregateException e) where TException : Exception
+        {
+            var innerException = e.InnerException;
+            if (innerException is TException)
+                return (TException) innerException;
+
+            throw new ShouldAssertException(
+                new ExpectedActualShouldlyMessage(typeof (TException), innerException.GetType()).ToString());
         }
 
         public static void NotThrow(Func<Task> action)
