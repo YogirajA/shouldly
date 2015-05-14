@@ -1,4 +1,6 @@
-﻿#if net40
+﻿using System.Threading;
+using JetBrains.Annotations;
+#if net40
 using System;
 using System.Threading.Tasks;
 
@@ -47,6 +49,14 @@ namespace Shouldly
                 throw new ShouldAssertException(new ShouldlyThrowShouldlyMessage(typeof(TException), customMessage).ToString());
             });
         }
+
+        public static Task NotThrowAsync<T>([InstantHandle] Func<Task<T>> action, 
+            TimeSpan timeoutAfter, Func<string> customMessage)
+        {
+           return Task.Factory.StartNew(() => NotThrow(action, timeoutAfter, customMessage));
+        }
+
+       
     }
 }
 #endif

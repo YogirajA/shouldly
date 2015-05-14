@@ -71,6 +71,11 @@ namespace Shouldly
             return CompleteIn(actual(), timeout, customMessage, "Task");
         }
 
+        public static Task CompleteInAsync<T>(Func<Task<T>> actual, TimeSpan timeout, Func<string> customMessage)
+        {
+            return CompleteInAsync(actual(), timeout, customMessage, "Task");
+        }
+
         /*** CompleteIn(Task<T>) ***/
         public static void CompleteIn(Task actual, TimeSpan timeout)
         {
@@ -133,6 +138,31 @@ namespace Shouldly
             }
         }
 
+        private static Task CompleteInAsync(Task actual, TimeSpan timeout, Func<string> customMessage, string what)
+        {  
+            try
+            {
+                return actual.TimeoutAfter(timeout);
+            }
+            catch (AggregateException ae)
+            {
+                var flattened = ae.Flatten();
+                if (flattened.InnerExceptions.Count != 1)
+                    throw;
+
+                var inner = flattened.InnerException;
+                var exception = inner as TimeoutException;
+                // When exception is a timeout exception we can provide a better error, otherwise rethrow
+                if (exception != null)
+                {
+                    var message = new CompleteInShouldlyMessage(what, timeout, customMessage).ToString();
+                    throw new ShouldCompleteInException(message, exception);
+                }
+
+                PreserveStackTrace(inner);
+                throw inner;
+            }
+        }
         private static void PreserveStackTrace(Exception exception)
         {
             MethodInfo preserveStackTrace = typeof(Exception).GetMethod("InternalPreserveStackTrace",
